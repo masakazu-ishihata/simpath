@@ -27,10 +27,9 @@ s-t path とは同じノードを複数回含まない s から t への経路�
 「共通パスをできるだけまとめ上げる」
 
 です。実際に３×３の s-t path 問題を解いてみると分かると思いますが、い
-くつかの s-t path は共通の部分パスを持ちます。実際に３×３の s-t path
-問題を解いてみると分かると思いますが、いくつかの s-t path は共通の部分
-パスを持ちます。この共通部分を発見するために「mate 配列」と「フロンティ
-ア」というアイディアを導入します。
+くつかの s-t path は共通の部分パスを持ちます。この共通部分を発見するた
+めに simpath algorithm では「mate 配列」と「フロンティア」というアイディ
+アを導入します。
 
 mate 配列とは（作りかけの）パスの"状態"を表します。そしてこの"状態"とは
 とても素敵で、 「mate 配列の値が一致すれば、その後の展開も一致する」 と
@@ -57,4 +56,40 @@ http://www.miraikan.jst.go.jp/sp/exhibition/medialabo.html
 JST ERATO 湊離散構造処理系プロジェクト
 http://www-erato.ist.hokudai.ac.jp/html/php/sub_html.php?id=19
 
+
+## 実行してみる
+
+試しに 8 × 8 のグリッドグラフに対する s-t path 問題を解いています。
+
+    time ruby simpath.rb -n 8
+
+すると以下のような結果となりました。
+
+    n = 8
+    e = 112
+    depth = 0 / 112: 1 nodes
+    depth = 1 / 112: 2 nodes
+    depth = 2 / 112: 2 nodes
+    depth = 3 / 112: 4 nodes
+    depth = 4 / 112: 4 nodes
+    depth = 5 / 112: 8 nodes
+    ...
+    depth = 110 / 112: 4 nodes
+    depth = 111 / 112: 3 nodes
+    789360053252 paths
+
+    real	0m17.021s
+    user	0m16.310s
+    sys	0m0.246s
+
+正しく数え上げられていますね。  
+
+
+ほんとかよ！と思う人は以下のページで確かめてください。このページは整数
+列の一部を入れると、その数列がどんなものか教えてくれるものです。  （す
+ごいね！）ここにプログラムの 2 ~ 5 の出力を入れればちゃんとグリッドグラ
+フに対する s-t path の数だと出てくるはずです。
+
+オンライン整数列大辞典
+http://oeis.org/?language=japanese
 

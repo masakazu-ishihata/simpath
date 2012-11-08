@@ -18,13 +18,12 @@ OptionParser.new { |opts|
   opts.on("-n [int]"){ |f|
     @n = f.to_i
   }
-  opts.on("-S"){ |f|
-    @flag_show = true
-  }
   # parse
   opts.parse!(ARGV)
 }
-
+################################################################################
+# classes
+################################################################################
 ########################################
 # gridgraph
 ########################################
@@ -64,9 +63,6 @@ class GridGraph
   end
 end
 
-################################################################################
-# Mate
-################################################################################
 ########################################
 # mate
 ########################################
@@ -176,6 +172,7 @@ class Mate
     p @mate
   end
 end
+
 ########################################
 # mate hash
 ########################################
@@ -215,6 +212,11 @@ class MateHash
     @hash.size
   end
 
+  #### clear ####
+  def clear
+    @hash.clear
+  end
+
   #### show ####
   def show
     @hash.keys.each do |key|
@@ -225,20 +227,27 @@ class MateHash
 end
 
 ########################################
-# ZDD
+# ZDD node
 ########################################
 class Node
   #### new ####
   def initialize(l, m)
     @label = l
     @mate  = m
+    @count = 0
     @child = [nil, nil]
   end
   attr_reader :label, :mate, :child
+  attr_accessor :count
 
   #### set ####
   def set_v_child(v, n)
     @child[v] = n
+  end
+
+  #### add_count ####
+  def add_count(c)
+    @count += c
   end
 
   #### show ####
@@ -268,14 +277,20 @@ class Manager
 
     #### root node ####
     @root = Node.new(0, Mate.new)
+    @root.count = 1
     add_node(@root)
+
+    @one  = Node.new(0, nil)
+    @zero = Node.new(1, nil)
   end
 
+  #### add a node to MateHash ####
   def add_node(n)
     l = n.label
     m = n.mate
     @mh[l].add(m, n)
   end
+
   #### get v-child of n ####
   def get_v_child(n, v)
     #### opened ####
@@ -300,9 +315,9 @@ class Manager
 
       # make child node
       if t
-        ch = 1
+        ch = @one
       else
-        ch = 0
+        ch = @zero
       end
 
       #### inter node #### 
@@ -322,7 +337,7 @@ class Manager
           @mh[l+1].add(m, ch)
         end
       else
-        ch = 0
+        ch = @zero
       end
     end
 
@@ -335,14 +350,18 @@ class Manager
   #### open a node ####
   def open
     for i in 0..@ne-1
+      puts "depth = #{i} / #{@ne}: #{@mh[i].size} nodes"
       @mh[i].nodes.each do |n|
         open_node(n)
       end
+      @mh[i].clear
     end
   end
   def open_node(n)
-    get_v_child(n, 0)
-    get_v_child(n, 1)
+    for v in 0..1
+      ch = get_v_child(n, v)
+      ch.count += n.count if ch != 0 && ch != 1
+    end
   end
 
   #### show ####
@@ -355,7 +374,7 @@ class Manager
   #### solve ####
   def solve
     open
-    count
+    count_up
   end
 
   #### size ####
@@ -368,17 +387,13 @@ class Manager
   end
 
   #### count ####
-  def count
-    count_node(@root)
+  def count_up
+    @one.count
   end
-  def count_node(n)
-    if n == 0
-      0
-    elsif n == 1
-      1
-    else
-      count_node(n.child[0]) + count_node(n.child[1])
-    end
+
+  #### sampling ####
+  def sample
+    n = @root
   end
 end
 
@@ -387,8 +402,7 @@ end
 ################################################################################
 g = GridGraph.new(@n)
 m = Manager.new(g.edge)
+puts "n = #{@n}"
+puts "e = #{(g.edge).size}"
 puts "#{m.solve} paths"
-puts "#{m.size} nodes"
-
-m.show if @flag_show
 

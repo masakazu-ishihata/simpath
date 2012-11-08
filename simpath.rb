@@ -18,241 +18,23 @@ OptionParser.new { |opts|
   opts.on("-n [int]"){ |f|
     @n = f.to_i
   }
+  opts.on("-S"){ |f|
+    @flag_show = true
+  }
   # parse
   opts.parse!(ARGV)
 }
 
-################################################################################
-# Class
-################################################################################
 ########################################
-# mate
+# gridgraph
 ########################################
-class Mate
-  #### new ####
-  def initialize
-    @edge = nil
-    @mate = Hash.new(nil)
-  end
-
-  #### look ####
-  def look(i)
-    @mate[i]
-  end
-
-  #### add node i ####
-  def add_node(i)
-    @mate[i] = i if @mate[i] == nil
-  end
-
-  #### remove node i ####
-  def delete_terminal_node(i)
-    if @mate[i] == 1 && @mate[1] == i && @mate.size == 2
-      true
-    else
-      false
-    end
-  end
-  def delete_node(i)
-    if @mate[i] == nil || @mate[i] == i || @mate[i] == 0
-      v = true
-    else
-      v = false
-    end
-    if i == 1
-      !v
-    else
-      @mate.delete(i)
-      v
-    end
-  end
-
-  #### add edge e = [i, j] as v####
-  def add_edge(e, v)
-    @edge = e
-
-    #### set as 0 ####
-    return true if v == 0
-
-    #### set as 1 ####
-    i = e[0]
-    j = e[1]
-
-    #### unaddable ####
-    return false if @mate[i] == 0 || @mate[j] == 0  # no path
-    return false if @mate[i] == j && @mate[j] == i  # cycle
-
-    #### unaddable ####
-    add_node(i)
-    add_node(j)
-
-    # new pair
-    if @mate[i] == i && @mate[j] == j
-      @mate[i] = j
-      @mate[j] = i
-
-    # extend path
-    elsif @mate[i] == i || @mate[j] == j
-      # i is a new end point
-      if @mate[j] == j
-        t = i
-        i = j
-        j = t
-      end
-
-      #
-      @mate[i] = @mate[j]
-      @mate[ @mate[i] ] = i
-      @mate[j] = 0
-
-    # connect paths
-    else
-      a = @mate[i]
-      b = @mate[j]
-      @mate[a] = b
-      @mate[b] = a
-      @mate[i] = 0
-      @mate[j] = 0
-    end
-
-    return true
-  end
-
-  #### to key (string) ####
-  def to_key
-    key = @mate.keys.sort.map{|key| "#{key}:#{@mate[key]};" }.join
-    key = "#{@edge[0]}:#{@edge[1]}+" + key if @edge != nil
-    key
-  end
-
-  #### set hash [key, val] ####
-  def set(key, val)
-    @mate[key] = val
-  end
-
-  #### clone ####
-  def clone
-    m = Mate.new
-    @mate.keys.each do |key|
-      m.set(key, @mate[key])
-    end
-    m
-  end
-
-  #### show ####
-  def show
-    p @mate
-  end
-
-  #### path? ####
-  def path?(s, t)
-    return false if @mate.size != 2
-
-    if @mate[s] == t && @mate[t] == s
-      true
-    else
-      false
-    end
-  end
-end
-
-########################################
-# node of ZDD
-########################################
-class Node
-  #### new ####
-  def initialize(edge, mate)
-    @edge = edge
-    @mate = mate
-    @child = [nil, nil]
-  end
-
-  #### getters ####
-  attr_reader :edge, :mate, :child
-  def key
-    @mate.to_key
-  end
-  def clone_mate
-    @mate.clone
-  end
-
-  #### setters ####
-  def set_child(val, node)
-    @child[val] = node
-  end
-  def set_edge(edge)
-    @edge = edge
-  end
-
-  #### show ####
-  def show
-    p @edge
-    @mate.show
-    puts "0-child : #{@child[0]}"
-    puts "1-child : #{@child[1]}"
-  end
-end
-
-########################################
-# mate hash
-########################################
-class MateHash
-  #### new ####
-  def initialize
-    @hash = Hash.new(nil)
-  end
-
-  #### member? ####
-  def member?(key)
-    if @hash[key] == nil
-      false
-    else
-      true
-    end
-  end
-
-  #### add node ####
-  def add_node(n)
-    add(n.key, n)
-  end
-  def add(key, n)
-    @hash[key] = n if !member?(key)
-  end
-
-  #### get node ####
-  def get_node(key)
-    @hash[key]
-  end
-
-  # show
-  def show
-    @hash.keys.each do |key|
-      puts "----------------------------------------"
-      puts "#{key} : #{@hash[key]}"
-      @hash[key].show
-      puts "----------------------------------------"
-    end
-  end
-end
-
-########################################
-# simpath
-########################################
-class Simpath
-  #### new ####
+class GridGraph
   def initialize(n)
-    @n = n # # nodes
-    @mh = MateHash.new  #
-    @r = Node.new([1,2], Mate.new)       # root node
-    @mh.add_node(@r)
-    @nl = [ @r ]
-
-    # generate edges
-    @ea = []       # edge ary
-    @eh = Hash.new # edge hash
-
+    @n = n
+    @e = []
     id = 0
     e = [0, 1]
+
     for i in 1..2 * (@n-1)
       if i < @n
         m = 2 * i
@@ -271,89 +53,331 @@ class Simpath
         end
 
         #
-        @ea.push(e.clone)
-        @eh["#{e[0]}:#{e[1]}"] = id
+        @e.push(e.clone)
         id += 1
       end
     end
-  end
 
-  #### show ####
-  def show
-    p @n
-    @mh.show
-  end
-
-  #### open ####
-  def open
-    return false  if @nl.size == 0
-
-    n = @nl.shift      # node
-    ce = n.edge        # current edge
-    ne = next_edge(ce) # next edge
-
-    #### v-child ####
-    for v in 0..1
-      m = n.clone_mate
-
-      # add current edge as v
-      t = m.add_edge(ce, v)
-
-      # delete node from mate if needed
-      t = m.delete_node(ce[0]) if t == true && (ne == nil || ce[0] != ne[0])
-
-      # last node
-      if t == false || m.look(1) == 0
-        ch = "0"
-      elsif ne == nil
-        if m.path?(1, @n**2)
-          ch = "1"
-        else
-          ch = "0"
-        end
-      else
-        if @mh.member?(m.to_key)
-          ch = @mh.get_node(m.to_key)
-          ch.set_edge(ne)
-        else
-          ch = Node.new(ne, m)
-          @mh.add_node(ch)
-        end
-        @nl.push(ch)
-      end
-
-      # set as child
-      n.set_child(v, ch)
+    def edge
+      @e
     end
+  end
+end
 
-    if @nl.size > 0
+################################################################################
+# Mate
+################################################################################
+########################################
+# mate
+########################################
+class Mate
+  #### new ####
+  def initialize
+    @mate = Hash.new(nil)
+  end
+
+  #### size ####
+  def size
+    @mate.size
+  end
+  def look(i)
+    @mate[i]
+  end
+
+  #### node ####
+  def add_node(i)
+    @mate[i] = i if @mate[i] == nil
+  end
+  def delete_node(i)
+    v =  @mate[i]
+    @mate.delete(i)
+    if v == nil || v == 0 || v == i
       true
     else
       false
     end
   end
 
-  #### next edge ####
-  def next_edge(e)
-    id = @eh["#{e[0]}:#{e[1]}"]
-    if id == @ea.size-1
-      nil
+  #### edge ####
+  def add_edge(e, v)
+    #### add as 0 ####
+    return true if v == 0
+
+    #### add as 1 ####
+    i = e[0]
+    j = e[1]
+
+    #### unaddable ####
+    return false if @mate[i] == 0 || @mate[j] == 0 # digree > 2
+    return false if @mate[i] == j && @mate[j] == i # cycle
+
+    #### addable ####
+    add_node(i)
+    add_node(j)
+
+    # new sub-path
+    if @mate[i] == i && @mate[j] == j
+      @mate[i] = j
+      @mate[j] = i
+
+    # extend sub-path
+    elsif @mate[i] == i || @mate[j] == j
+      if @mate[j] == j
+        t = i;  i = j;  j = t
+      end
+      s = @mate[j]
+      @mate[i] = s
+      @mate[s] = i
+      @mate[j] = 0
+
+    # conect two sub-paths
     else
-      @ea[id + 1]
+      s = @mate[i]
+      t = @mate[j]
+      @mate[s] = t
+      @mate[t] = s
+      @mate[i] = 0
+      @mate[j] = 0
+    end
+
+    return true
+  end
+
+  #### to_key ####
+  def to_key
+    @mate.keys.sort.map{|key| "#{key}:#{@mate[key]};" }.join
+  end
+
+  #### set hash [key, val] ####
+  def set(key, val)
+    @mate[key] = val
+  end
+
+  #### clone ####
+  def clone
+    m = Mate.new
+    @mate.keys.each do |key|
+      m.set(key, @mate[key])
+    end
+    m
+  end
+
+  #### path? ####
+  def path?(s, t)
+    if @mate[s] == t && @mate[t] == s && size == 2
+      true
+    else
+      false
     end
   end
 
-  #### count up ####
-  def count_up
-    count_up_node(@r)
+  #### show ####
+  def show
+    p @mate
   end
-  def count_up_node(n)
-    if n == "1"
-      1
-    elsif n == "0"
-      0
+end
+########################################
+# mate hash
+########################################
+class MateHash
+  #### new ####
+  def initialize
+    @hash = Hash.new(nil)
+    #
+    # @hash[m.to_ky] = node
+    #
+  end
+
+  #### member? ####
+  def member?(m)
+    if @hash[m.to_key] != nil
+      true
     else
-      count_up_node(n.child[0]) + count_up_node(n.child[1])
+      false
+    end
+  end
+
+  #### add [key (mate), val] ####
+  def add(mate, val)
+    @hash[mate.to_key] = val
+  end
+  def get(mate)
+    @hash[mate.to_key]
+  end
+
+  #### nodes ####
+  def nodes
+    @hash.values
+  end
+
+  #### size ####
+  def size
+    @hash.size
+  end
+
+  #### show ####
+  def show
+    @hash.keys.each do |key|
+      p key
+      @hash[key].show
+    end
+  end
+end
+
+########################################
+# ZDD
+########################################
+class Node
+  #### new ####
+  def initialize(l, m)
+    @label = l
+    @mate  = m
+    @child = [nil, nil]
+  end
+  attr_reader :label, :mate, :child
+
+  #### set ####
+  def set_v_child(v, n)
+    @child[v] = n
+  end
+
+  #### show ####
+  def show
+    puts "----------------------------------------"
+    puts "address : #{self}"
+    puts "label   : #{@label}"
+    @mate.show
+    puts "0-child : #{@child[0]}"
+    puts "1-child : #{@child[1]}"
+    puts "----------------------------------------"
+  end
+end
+
+########################################
+# manager
+########################################
+class Manager
+  #### new ####
+  def initialize(ae)
+    #### # of edges and array of edges ####
+    @ne = ae.size
+    @ae = ae.sort{|a, b| (a[0] <=> b[0]).nonzero? or a[1] <=> b[1] }
+
+    #### array of matehash ####
+    @mh = Array.new(@ne){ |i| MateHash.new }
+
+    #### root node ####
+    @root = Node.new(0, Mate.new)
+    add_node(@root)
+  end
+
+  def add_node(n)
+    l = n.label
+    m = n.mate
+    @mh[l].add(m, n)
+  end
+  #### get v-child of n ####
+  def get_v_child(n, v)
+    #### opened ####
+    return n.child[v] if n.child[v] != nil
+
+    #### not opened ####
+    l = n.label
+    e = @ae[l]
+    u = nil
+    u = @ae[l+1] if l < @ne-1
+
+    ch = nil             # v-child
+    m  = (n.mate).clone  # mate for ch
+
+    # add e as v
+    t = m.add_edge(e, v)  # true if added
+
+    #### last node ####
+    if u == nil
+      t = t && m.delete_node(e[0])  # true if e[0] is not an end
+      t = t && m.path?(1, e[1])     # true if 1 - e[1] path
+
+      # make child node
+      if t
+        ch = 1
+      else
+        ch = 0
+      end
+
+      #### inter node #### 
+    else
+      if e[0] == 1 && e[0] != u[0]
+        t = t && !(m.look(1) == 0 || m.look(1) == nil)  # true if node 1 is an end
+      elsif e[0] != u[0] # delete if needed
+        t = t && m.delete_node(e[0])                    # true if e[0] is not an end
+      end
+
+      # make child node
+      if t
+        if @mh[l+1].member?(m)   # existing node
+          ch = @mh[l+1].get(m)
+        else
+          ch = Node.new(l+1, m)  # new node
+          @mh[l+1].add(m, ch)
+        end
+      else
+        ch = 0
+      end
+    end
+
+    #### set & add to hash ####
+    n.set_v_child(v, ch)
+
+    return ch
+  end
+
+  #### open a node ####
+  def open
+    for i in 0..@ne-1
+      @mh[i].nodes.each do |n|
+        open_node(n)
+      end
+    end
+  end
+  def open_node(n)
+    get_v_child(n, 0)
+    get_v_child(n, 1)
+  end
+
+  #### show ####
+  def show
+    for i in 0..@ne-1
+      @mh[i].show
+    end
+  end
+
+  #### solve ####
+  def solve
+    open
+    count
+  end
+
+  #### size ####
+  def size
+    s = 0
+    @mh.each do |mh|
+      s += mh.size
+    end
+    s
+  end
+
+  #### count ####
+  def count
+    count_node(@root)
+  end
+  def count_node(n)
+    if n == 0
+      0
+    elsif n == 1
+      1
+    else
+      count_node(n.child[0]) + count_node(n.child[1])
     end
   end
 end
@@ -361,9 +385,10 @@ end
 ################################################################################
 # main
 ################################################################################
-s = Simpath.new(@n)
-i = 1
-while s.open
-end
-# s.show
-p s.count_up
+g = GridGraph.new(@n)
+m = Manager.new(g.edge)
+puts "#{m.solve} paths"
+puts "#{m.size} nodes"
+
+m.show if @flag_show
+

@@ -21,13 +21,15 @@ OptionParser.new { |opts|
   # parse
   opts.parse!(ARGV)
 }
+
 ################################################################################
 # classes
 ################################################################################
 ########################################
-# gridgraph
+# grid graph
 ########################################
 class GridGraph
+  #### new ####
   def initialize(n)
     @n = n
     @e = []
@@ -57,6 +59,7 @@ class GridGraph
       end
     end
 
+    #### return edges ####
     def edge
       @e
     end
@@ -76,11 +79,13 @@ class Mate
   def size
     @mate.size
   end
+
+  #### look a value of i ####
   def look(i)
     @mate[i]
   end
 
-  #### node ####
+  #### about node ####
   def add_node(i)
     @mate[i] = i if @mate[i] == nil
   end
@@ -94,7 +99,7 @@ class Mate
     end
   end
 
-  #### edge ####
+  #### about edge ####
   def add_edge(e, v)
     #### add as 0 ####
     return true if v == 0
@@ -166,11 +171,6 @@ class Mate
       false
     end
   end
-
-  #### show ####
-  def show
-    p @mate
-  end
 end
 
 ########################################
@@ -179,10 +179,7 @@ end
 class MateHash
   #### new ####
   def initialize
-    @hash = Hash.new(nil)
-    #
-    # @hash[m.to_ky] = node
-    #
+    @hash = Hash.new(nil)     # @hash[m.to_ky] = node
   end
 
   #### member? ####
@@ -194,10 +191,17 @@ class MateHash
     end
   end
 
+  #### size ####
+  def size
+    @hash.size
+  end
+
   #### add [key (mate), val] ####
   def add(mate, val)
     @hash[mate.to_key] = val
   end
+
+  #### get val of mate ####
   def get(mate)
     @hash[mate.to_key]
   end
@@ -207,22 +211,9 @@ class MateHash
     @hash.values
   end
 
-  #### size ####
-  def size
-    @hash.size
-  end
-
   #### clear ####
   def clear
     @hash.clear
-  end
-
-  #### show ####
-  def show
-    @hash.keys.each do |key|
-      p key
-      @hash[key].show
-    end
   end
 end
 
@@ -255,6 +246,7 @@ class Node
     puts "----------------------------------------"
     puts "address : #{self}"
     puts "label   : #{@label}"
+    puts "count   : #{@count}"
     @mate.show
     puts "0-child : #{@child[0]}"
     puts "1-child : #{@child[1]}"
@@ -347,8 +339,9 @@ class Manager
     return ch
   end
 
-  #### open a node ####
-  def open
+  #### open all nodes & count up####
+  def solve
+    # open all nodes
     for i in 0..@ne-1
       puts "depth = #{i} / #{@ne}: #{@mh[i].size} nodes"
       @mh[i].nodes.each do |n|
@@ -356,44 +349,17 @@ class Manager
       end
       @mh[i].clear
     end
+
+    # return the count of 1-terminal
+    @one.count
   end
+
+  #### open a node ####
   def open_node(n)
     for v in 0..1
       ch = get_v_child(n, v)
       ch.count += n.count if ch != 0 && ch != 1
     end
-  end
-
-  #### show ####
-  def show
-    for i in 0..@ne-1
-      @mh[i].show
-    end
-  end
-
-  #### solve ####
-  def solve
-    open
-    count_up
-  end
-
-  #### size ####
-  def size
-    s = 0
-    @mh.each do |mh|
-      s += mh.size
-    end
-    s
-  end
-
-  #### count ####
-  def count_up
-    @one.count
-  end
-
-  #### sampling ####
-  def sample
-    n = @root
   end
 end
 
@@ -405,4 +371,3 @@ m = Manager.new(g.edge)
 puts "n = #{@n}"
 puts "e = #{(g.edge).size}"
 puts "#{m.solve} paths"
-

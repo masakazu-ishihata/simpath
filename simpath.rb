@@ -294,7 +294,7 @@ class Manager
     u = nil
     u = @ae[l+1] if l < @ne-1
 
-    ch = nil             # v-child
+    ch = @zero           # v-child (default 0)
     m  = (n.mate).clone  # mate for ch
 
     # add e as v
@@ -306,11 +306,7 @@ class Manager
       t = t && m.path?(1, e[1])     # true if 1 - e[1] path
 
       # make child node
-      if t
-        ch = @one
-      else
-        ch = @zero
-      end
+      ch = @one if t
 
       #### inter node #### 
     else
@@ -328,8 +324,6 @@ class Manager
           ch = Node.new(l+1, m)  # new node
           @mh[l+1].add(m, ch)
         end
-      else
-        ch = @zero
       end
     end
 
@@ -358,7 +352,7 @@ class Manager
   def open_node(n)
     for v in 0..1
       ch = get_v_child(n, v)
-      ch.count += n.count if ch != 0 && ch != 1
+      ch.count += n.count
     end
   end
 end
